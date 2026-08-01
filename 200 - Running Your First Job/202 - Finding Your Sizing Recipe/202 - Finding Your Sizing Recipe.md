@@ -129,7 +129,7 @@ Imagine you are training a ResNet-50 model on high-resolution animal images.
 6. Find the first row in the verdict table that fits the expected VRAM.
 7. Run a small representative profile and replace the recipe estimates with measurements.
 
-The recipe’s worked example uses approximately 14 GB of GPU VRAM, 16 CPU cores, 48 GB of RAM, and a 389 GB dataset. Its verdict table shows that the VRAM requirement fits the 16 GB tier, while the storage plan must account for staging the dataset.
+The recipe’s worked example uses approximately 14 GB of GPU VRAM, 16 CPU cores, 48 GB of RAM, and a 389 GB dataset. Its verdict table shows that the VRAM requirement fits the 16 GB tier. The storage plan needs more care: the dataset is larger than the current 300 GB default scratch quota. It must come from a course shared directory or an approved larger allocation, then it can be staged to temporary local storage requested with `#SBATCH --tmp=400G` and accessed through `$TMPDIR`. Anything kept only in `$TMPDIR` is erased when the job ends.
 
 The final decision is based on the combination of all four numbers, not GPU VRAM alone.
 
@@ -143,6 +143,8 @@ The final decision is based on the combination of all four numbers, not GPU VRAM
 - GPU training still depends on CPU preprocessing and storage I/O.
 - Worked examples are starting points, not scripts to copy unchanged.
 - “Fits” means the estimate is plausible. Profile your code before committing to a long run.
+
+> ICE currently provides a 30 GB home quota and a 300 GB scratch quota per student. Quotas and retention rules can change, so check [Storage on ICE](https://gatech.service-now.com/home?id=kb_article_view&sysparm_article=KB0042094) before planning a large dataset.
 
 ---
 

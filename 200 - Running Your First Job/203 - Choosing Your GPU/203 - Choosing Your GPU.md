@@ -29,22 +29,19 @@ If the peak requirement plus headroom is at or below 16 GB and the software supp
 #SBATCH --gres=gpu:V100:1
 ```
 
-If you must distinguish the 32 GB version, use the exact GPU name accepted by ICE rather than assuming the generic request will select it.
-
 ### Question 2: If not, what is the smallest tier that fits?
 
 Work upward from the smallest tier. Current ICE hardware is grouped approximately like this:
 
-| Required VRAM | Candidate tier | Check before choosing |
-|---:|---|---|
-| Up to 16 GB | V100 16 GB | Framework and model compatibility |
-| Up to 24 GB | Quadro RTX 6000 | Older hardware may run more slowly |
-| Up to 32 GB | V100 32 GB | Request the specific 32 GB type when needed |
-| Up to 40 GB | A100 40 GB | Verify the exact `--gres` name |
-| Up to 48 GB | A40, L40S, or RTX 6000 Pro Blackwell | Compare availability and multi-GPU layout |
-| Up to 64 GB | MI210 | AMD ROCm compatibility is required |
-| Up to 80 GB | A100 80 GB or H100 80 GB | Prefer the smallest practical, available option |
-| Up to 142 GB | H200 142 GB | Scarce capacity; use when the memory is genuinely required |
+| Required VRAM | Candidate tier | Maximum GPUs per node | Check before choosing |
+|---:|---|---:|---|
+| Up to 16 GB | V100 16 GB | 2 | CUDA 12 drivers; check framework compatibility |
+| Up to 24 GB | Quadro Pro RTX6000 | 4 | CUDA 12 drivers; older hardware may run more slowly |
+| Up to 40 GB | A100 40 GB | 2 | Use the `A100-40GB` constraint when memory size matters |
+| Up to 48 GB | A40, L40S, or RTX6000 Pro Blackwell | 2, 8, or 16 | Compare availability, CPU architecture, and multi-GPU layout |
+| Up to 64 GB | MI210 | 2 | AMD ROCm compatibility is required |
+| Up to 80 GB | A100 80 GB or H100 80 GB | 2 or 8 | Use a memory constraint for the A100 80 GB tier |
+| Up to 142 GB | H200 142 GB | 8 | Scarce capacity; use when the memory is genuinely required |
 
 Hardware inventory and accepted names can change. Check the current ICE resources before finalizing a long-running job.
 
@@ -57,6 +54,8 @@ Request multiple GPUs only when at least one of these is true:
 - A measured scaling test shows that additional GPUs reduce elapsed time enough to justify them.
 
 Multiple GPUs do not behave like one automatically pooled memory device. Your framework and code must distribute the work. A script that only selects `cuda:0` will not use the other GPUs.
+
+Ordinary ICE jobs are limited to 16 GPU-hours. GPU-hours equal the number of GPUs multiplied by wall time, so two GPUs can run for at most eight hours and eight GPUs can run for at most two hours in one job.
 
 ---
 
@@ -81,7 +80,7 @@ Does the program use GPU-enabled code?
 
 ## Why not request an H100 or H200 every time?
 
-H100 and H200 capacity available to general ICE users is more limited than the total inventory suggests because many nodes are reserved. A job that also fits on an A100 may start sooner there.
+H100 and H200 capacity available to general ICE users is more limited than the total inventory suggests. As of July 31, 2026, 13 of 19 H100 nodes and 12 of 18 H200 nodes are reserved for CoE and AI Makerspace users. A job that also fits on an A100 may start sooner there.
 
 Use an H-class GPU when you need its memory capacity, bandwidth, supported numeric formats, or demonstrated performance. Do not choose one simply because it is newer.
 
@@ -95,14 +94,27 @@ The GPU request has this general form:
 #SBATCH --gres=gpu:<GPU-TYPE>:<COUNT>
 ```
 
-Example request forms include:
+Each block below is a separate example request:
 
 ```bash
+# One V100 16 GB
 #SBATCH --gres=gpu:V100:1
-#SBATCH --gres=gpu:V100-32GB:1
-#SBATCH --gres=gpu:A100:2
+
+# One Quadro Pro RTX6000 24 GB
+#SBATCH --gres=gpu:RTX_6000:1
+
+# One A100 40 GB
+#SBATCH --gres=gpu:1
+#SBATCH -C A100-40GB
+
+# Four H200 GPUs
 #SBATCH --gres=gpu:H200:4
+
+# One RTX6000 Pro Blackwell
+#SBATCH --gres=gpu:rtx_pro_6000_blackwell:1
 ```
+
+The A100 example uses a Slurm constraint to distinguish the 40 GB model. Use `A100-80GB` instead when the 80 GB model is required. The RTX6000 Pro Blackwell resource name is lowercase and includes underscores exactly as shown.
 
 Do not copy an example until you confirm the name and count appropriate for your job. On ICE, you can inspect the GPU resources advertised to Slurm with:
 
@@ -120,12 +132,12 @@ A small profiling run peaks at 18 GB of GPU VRAM.
 
 1. Add about 20% headroom: `18 GB × 1.2 = 21.6 GB`.
 2. It does not fit safely on a 16 GB V100.
-3. A 24 GB GPU is mathematically large enough, but leaves only about 10% headroom relative to the 21.6 GB plan.
-4. A 32 GB V100 provides a more comfortable first request.
+3. A 24 GB Quadro Pro RTX6000 is the smallest current ICE tier that fits the 21.6 GB plan.
+4. Confirm that the software can use the CUDA 12 drivers on these nodes.
 5. Request one GPU because the application has not demonstrated multi-GPU support.
 
 ```bash
-#SBATCH --gres=gpu:V100-32GB:1
+#SBATCH --gres=gpu:RTX_6000:1
 ```
 
 After the real run, compare measured peak VRAM and utilization with the reservation. Revise the next request rather than keeping the first estimate forever.
@@ -149,3 +161,5 @@ VRAM capacity is necessary, but it is not the only requirement.
 For LLM **inference serving**, continue to **Using the VRAM Calculator**. For training or fine-tuning, use the relevant sizing recipe instead.
 
 For current hardware names and availability, consult [PACE ICE Resources](https://gatech.service-now.com/home?id=kb_article_view&sysparm_article=KB0042095).
+
+> **PACE note:** This guide was verified against [ICE Cluster Resources](https://gatech.service-now.com/home?id=kb_article_view&sysparm_article=KB0042095) and [Using Slurm on ICE](https://gatech.service-now.com/home?id=kb_article_view&sysparm_article=KB0042096) on July 31, 2026. Hardware, drivers, limits, and accepted Slurm options can change.

@@ -17,10 +17,10 @@ By the end of this page, you should be able to write down four sensible resource
 
 | Resource | What uses it | What too little looks like | Where it appears in a job request |
 |---|---|---|---|
-| **CPU cores** | Data loading, decoding, preprocessing, augmentation, I/O, and CPU-only computation | The GPU waits for data, preprocessing is slow, or the job uses only one core | `#SBATCH --cpus-per-task=<cores>` |
+| **CPU cores** | Data loading, decoding, preprocessing, augmentation, I/O, and CPU-only computation | The GPU waits for data, preprocessing is slow, or the job uses only one core | Use `--ntasks` for independent tasks. For one multithreaded task, combine `--ntasks=1` with `--cpus-per-task=<cores>` |
 | **GPU VRAM** | Model weights, activations, gradients, and the inference KV cache | `CUDA out of memory`, a batch will not fit, or the model cannot load | Choose a GPU model/count with `#SBATCH --gres=gpu:<type>:<count>` |
 | **System RAM** | Datasets, DataFrames, Python objects, buffers, and worker processes | The scheduler kills the job for exceeding memory, often reported as an OOM event | `#SBATCH --mem=<amount>` |
-| **Storage** | Input data, environment and model caches, temporary files, logs, and checkpoints | A read, write, or checkpoint save fails; the filesystem or quota fills | Plan a project/scratch location; there is no universal `#SBATCH` storage line |
+| **Storage** | Input data, environment and model caches, temporary files, logs, and checkpoints | A read, write, or checkpoint save fails; the filesystem or quota fills | Plan for home, scratch, a course shared directory, or temporary local storage through `$TMPDIR` |
 
 ### GPU VRAM and system RAM are different
 
@@ -51,6 +51,7 @@ The request is not automatically safe because it asks for powerful GPUs:
 - Four CPU cores may be unable to feed an image or audio pipeline fast enough.
 - 16 GB of system RAM may still be too small.
 - No storage requirement has been checked.
+- The 72-hour GPU request exceeds ICE's ordinary 16-hour GPU wall-time limit. Eight GPUs would also exceed the 16 GPU-hour limit unless the wall time were no more than two hours.
 
 Over-requesting one resource does not compensate for under-requesting another.
 
@@ -99,11 +100,13 @@ That estimate becomes:
 
 ```bash
 #SBATCH --gres=gpu:V100:1
+#SBATCH --ntasks=1
 #SBATCH --cpus-per-task=16
 #SBATCH --mem=48G
+#SBATCH --tmp=400G
 ```
 
-Storage remains a separate plan: confirm that the selected project or scratch location has at least 400 GB available for the dataset, working files, logs, and checkpoints.
+ICE currently provides each student with a 30 GB home quota and a 300 GB scratch quota. This 400 GB example will not fit in either default allocation. It would need a course shared directory, an approved scratch-quota increase, or enough temporary local storage on the compute node. The `--tmp=400G` line reserves local disk for the job, and the files are accessed through `$TMPDIR`. Local files are erased when the job ends, so copy final results back to persistent storage before completion.
 
 ---
 
@@ -115,7 +118,7 @@ Wall time is not one of the four capacity numbers, but your job request should s
 #SBATCH --time=12:00:00
 ```
 
-If the time is too short, Slurm stops the job when the limit is reached. A needlessly long limit can make the job harder to schedule. Estimate wall time from a small run, add reasonable headroom, and save checkpoints so work can resume.
+If the time is too short, Slurm stops the job when the limit is reached. A needlessly long limit can make the job harder to schedule. Ordinary ICE jobs are currently limited to 18 hours for CPU jobs and 16 hours for GPU jobs. Each job is also limited to 512 CPU-hours or 16 GPU-hours. For example, a request for four GPUs can run for at most four hours. Estimate wall time from a small run, add reasonable headroom, and save checkpoints so work can resume.
 
 ---
 
@@ -133,6 +136,8 @@ Complete this before writing the final job script:
 | What evidence supports these estimates: a recipe, a profile, or both? | |
 
 > **Rule to remember:** Profile small → record peak usage → add headroom → request the smallest resource tier that fits.
+
+> **PACE note:** ICE hardware, quotas, limits, and Slurm options can change. This guide was verified against the official PACE documentation on July 31, 2026. Check [Using Slurm on ICE](https://gatech.service-now.com/home?id=kb_article_view&sysparm_article=KB0042096) and [Storage on ICE](https://gatech.service-now.com/home?id=kb_article_view&sysparm_article=KB0042094) before submitting a large job.
 
 ---
 

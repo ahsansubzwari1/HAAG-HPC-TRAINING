@@ -1,6 +1,6 @@
 # Using the VRAM Calculator
 
-The LLM-GPU Sizing Calculator estimates how much GPU VRAM is needed to **serve a large language model for inference** and shows which PACE ICE GPU configurations can fit that estimate.
+The LLM-GPU Sizing Calculator estimates how much GPU VRAM is needed to **serve a large language model for inference** and compares that estimate with its built-in ICE GPU library.
 
 [Open the live LLM-GPU Sizing Calculator](https://ahsansubzwari1.github.io/HAAG-Compute-Sizing-Guidelines/tools/vram-calculator/index.html)
 
@@ -150,7 +150,9 @@ Rows represent ICE GPU models, and columns represent GPU counts. The current too
 
 Click a GPU row to display the smallest listed GPU count that is not rated insufficient, its average headroom, and the worst-case percentage.
 
-> Multi-GPU columns assume that the serving stack can distribute the model and memory. VRAM from separate GPUs is not automatically pooled by Slurm.
+The live calculator's hardware library may lag behind the current cluster. As of July 31, 2026, the calculator still shows a V100 32 GB row, but current PACE documentation lists only the V100 16 GB tier. Ignore the V100 32 GB row. The matrix also calculates every listed GPU-count column even when that many GPUs are not installed together on one ICE node. Use the per-node limits in **Choosing Your GPU** before treating a result as schedulable.
+
+> Multi-GPU columns assume that the serving stack can distribute the model with tensor or pipeline parallelism. VRAM from separate GPUs is not automatically pooled by Slurm, and ordinary data parallelism keeps a copy of the model on every GPU. ICE also limits ordinary jobs to 16 GPU-hours, so additional GPUs reduce the maximum wall time available to that job.
 
 ---
 
@@ -200,7 +202,7 @@ Worst case: 16 GB weights + 3.22 GB KV cache + 14 GB overhead ≈ 33.22 GB
 
 The display rounds these values to whole gigabytes. In the recommendation matrix:
 
-- A single 32 GB GPU is rated **Insufficient** because the average estimate is above 92% of capacity.
+- Any 32 GB total configuration is rated **Insufficient** because the average estimate is above 92% of that capacity. Current ICE does not list a V100 32 GB GPU, even though that row still appears in the live calculator.
 - A single 40 GB GPU is rated **Tight**.
 - A single 48 GB GPU is rated **Comfortable**.
 
@@ -238,7 +240,7 @@ Record these values before turning the result into a Slurm request:
 | Framework-overhead assumption | |
 | Average VRAM estimate | |
 | Worst-case VRAM estimate | |
-| Smallest comfortable compatible ICE configuration | |
+| Smallest comfortable, compatible, and schedulable ICE configuration | |
 | Profiling result | |
 
 ---
@@ -247,3 +249,5 @@ Record these values before turning the result into a Slurm request:
 
 - [Open the live LLM-GPU Sizing Calculator](https://ahsansubzwari1.github.io/HAAG-Compute-Sizing-Guidelines/tools/vram-calculator/index.html).
 - Review **Choosing Your GPU** before turning the estimate into a request.
+
+> **PACE note:** The ICE-specific warnings in this guide were verified against [ICE Cluster Resources](https://gatech.service-now.com/home?id=kb_article_view&sysparm_article=KB0042095) and [Using Slurm on ICE](https://gatech.service-now.com/home?id=kb_article_view&sysparm_article=KB0042096) on July 31, 2026. The live calculator is an estimate and its hardware library is not the final authority. Hardware, reservations, drivers, and job limits can change.
